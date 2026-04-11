@@ -1,5 +1,9 @@
 import sys
+import os
+import numpy as np
+from PIL import Image
 from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget
+from PyQt6.QtGui import QPixmap, QImage
 from PyQt6.QtCore import Qt
 
 
@@ -143,6 +147,21 @@ QStatusBar {{
     padding: 4px 14px;
 }}
 """
+
+
+def numpy_to_qpixmap(arr: np.ndarray) -> QPixmap:
+    arr = np.ascontiguousarray(arr)
+    h, w, c = arr.shape
+    qimg = QImage(arr.data, w, h, w * c, QImage.Format.Format_RGB888)
+    return QPixmap.fromImage(qimg)
+
+
+def load_image(path: str) -> np.ndarray:
+    return np.array(Image.open(path).convert("RGB"), dtype=np.uint8)
+
+
+def save_image(arr: np.ndarray, path: str):
+    Image.fromarray(arr).save(path)
 
 
 class MainWindow(QMainWindow):
