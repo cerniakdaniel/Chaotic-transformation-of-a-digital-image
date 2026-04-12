@@ -45,6 +45,103 @@ QScrollBar::handle:vertical {{
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
     height: 0px;
 }}
+QTabWidget::pane {{
+    border: none;
+    background: {C['bg']};
+}}
+QTabBar::tab {{
+    background: {C['bg_panel']};
+    color: {C['text_muted']};
+    padding: 10px 28px;
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-size: 12px;
+    margin-right: 2px;
+    margin-top: 10px;
+}}
+QTabBar::tab:selected {{
+    color: {C['blue']};
+    border-bottom: 2px solid {C['blue']};
+    background: {C['bg_panel']};
+    font-weight: bold;
+}}
+QTabBar::tab:hover:!selected {{
+    color: {C['text']};
+    background: {C['bg_card']};
+}}
+QPushButton {{
+    background: {C['blue']};
+    color: #FFFFFF;
+    border: none;
+    border-radius: 7px;
+    padding: 9px 20px;
+    font-size: 12px;
+    font-weight: 600;
+}}
+QPushButton:hover {{
+    background: {C['blue_dark']};
+}}
+QPushButton:pressed {{
+    background: #1D4F8A;
+}}
+QPushButton#btn_green {{
+    background: {C['green']};
+}}
+QPushButton#btn_green:hover {{
+    background: #2D8055;
+}}
+QPushButton#btn_red {{
+    background: {C['red']};
+}}
+QPushButton#btn_red:hover {{
+    background: #A83535;
+}}
+QPushButton#btn_neutral {{
+    background: {C['bg_card2']};
+    color: {C['text_muted']};
+    border: 1px solid {C['border']};
+}}
+QPushButton#btn_neutral:hover {{
+    background: {C['border']};
+    color: {C['text']};
+}}
+QSpinBox {{
+    background: {C['bg_card']};
+    color: {C['text']};
+    border: 1px solid {C['border']};
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 12px;
+}}
+QSpinBox:focus {{
+    border: 1px solid {C['blue']};
+}}
+QSpinBox::up-button, QSpinBox::down-button {{
+    width: 18px;
+    background: {C['bg_card2']};
+    border: none;
+}}
+QLabel {{
+    background: transparent;
+    color: {C['text']};
+}}
+QTextEdit {{
+    background: {C['bg_card']};
+    color: {C['text']};
+    border: 1px solid {C['border']};
+    border-radius: 8px;
+    font-family: 'Cascadia Code', 'Courier New', monospace;
+    font-size: 11px;
+    padding: 10px;
+    selection-background-color: {C['border_hi']};
+}}
+QStatusBar {{
+    background: {C['header_bg']};
+    color: {C['text_muted']};
+    border-top: 1px solid {C['border']};
+    font-size: 11px;
+    padding: 4px 14px;
+}}
 """
 
 
