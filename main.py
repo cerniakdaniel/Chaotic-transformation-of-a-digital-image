@@ -2,7 +2,10 @@ import sys
 import os
 import numpy as np
 from PIL import Image
-from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget
+from PyQt6.QtWidgets import (
+    QApplication, QMainWindow, QWidget, QVBoxLayout,
+    QLabel, QFrame, QSizePolicy
+)
 from PyQt6.QtGui import QPixmap, QImage
 from PyQt6.QtCore import Qt
 
@@ -162,6 +165,94 @@ def load_image(path: str) -> np.ndarray:
 
 def save_image(arr: np.ndarray, path: str):
     Image.fromarray(arr).save(path)
+
+
+class ImagePanel(QFrame):
+    def __init__(self, title: str, accent: str = None,
+                 fixed_height: int = 260, parent=None):
+        super().__init__(parent)
+        self._accent = accent or C['blue']
+        self._info_text = ""
+        self._arr = None
+        self.setStyleSheet(f"""
+            QFrame {{
+                background: {C['bg_card']};
+                border: 1px solid {C['border']};
+                border-radius: 12px;
+            }}
+        """)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+
+        root = QVBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 12)
+        root.setSpacing(0)
+
+        top_bar = QFrame()
+        top_bar.setFixedHeight(4)
+        top_bar.setStyleSheet(
+            f"background: {self._accent}; border-radius: 12px 12px 0 0; border: none;"
+        )
+        root.addWidget(top_bar)
+
+        inner = QVBoxLayout()
+        inner.setContentsMargins(12, 10, 12, 0)
+        inner.setSpacing(8)
+
+        self.title_lbl = QLabel(title)
+        self.title_lbl.setStyleSheet(
+            f"color: {C['text_muted']}; font-size: 10px; "
+            f"font-weight: bold; letter-spacing: 1.5px;"
+        )
+        inner.addWidget(self.title_lbl)
+
+        self.img_lbl = QLabel()
+        self.img_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.img_lbl.setFixedHeight(fixed_height)
+        self.img_lbl.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
+        )
+        self.img_lbl.setStyleSheet(
+            f"border: 1px solid {C['border']}; border-radius: 8px; "
+            f"background: {C['bg_panel']}; color: {C['text_dim']}; font-size: 12px;"
+        )
+        self.img_lbl.setText("Brak obrazu")
+        inner.addWidget(self.img_lbl)
+
+        self.info_lbl = QLabel("")
+        self.info_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.info_lbl.setStyleSheet(
+            f"color: {C['text_muted']}; font-size: 10px; padding: 0px;"
+        )
+        inner.addWidget(self.info_lbl)
+        root.addLayout(inner)
+
+    def set_image(self, arr, info: str = ""):
+        self._arr = arr
+        self._info_text = info
+        if arr is None:
+            self.img_lbl.setText("Brak obrazu")
+            self.img_lbl.setPixmap(QPixmap())
+            self.info_lbl.setText("")
+            return
+        pix = numpy_to_qpixmap(arr)
+        target_w = self.img_lbl.width() - 8
+        target_h = self.img_lbl.height() - 8
+        if target_w > 10 and target_h > 10:
+            scaled = pix.scaled(
+                target_w, target_h,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation
+            )
+            self.img_lbl.setPixmap(scaled)
+        self.info_lbl.setText(info)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if self._arr is not None:
+            self.set_image(self._arr, self._info_text)
+
+    def get_array(self):
+        return self._arr
 
 
 class MainWindow(QMainWindow):
