@@ -4,11 +4,10 @@ import numpy as np
 from PIL import Image
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout,
-    QLabel, QFrame, QSizePolicy
+    QLabel, QFrame, QSizePolicy, QFileDialog
 )
-from PyQt6.QtGui import QPixmap, QImage
-from PyQt6.QtCore import Qt
-
+from PyQt6.QtGui import QPixmap, QImage, QDragEnterEvent, QDropEvent
+from PyQt6.QtCore import Qt, pyqtSignal
 
 C = {
     "bg":          "#0B0F1A",
@@ -253,6 +252,65 @@ class ImagePanel(QFrame):
 
     def get_array(self):
         return self._arr
+
+class DropZone(QLabel):
+    file_dropped = pyqtSignal(str)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAcceptDrops(True)
+        self.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.setFixedHeight(52)
+        self.setText("📂   Przeciągnij obraz tutaj  lub  kliknij aby wybrać")
+        self.setToolTip("PNG, JPG, BMP, TIFF")
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._normal()
+
+    def _normal(self):
+        self.setStyleSheet(
+            f"border: 2px dashed {C['border_hi']}; border-radius: 8px; "
+            f"background: {C['bg_card']}; color: {C['text_muted']}; "
+            f"font-size: 12px; padding: 6px;"
+        )
+
+    def _hover(self):
+        self.setStyleSheet(
+            f"border: 2px dashed {C['blue']}; border-radius: 8px; "
+            f"background: {C['bg_card2']}; color: {C['blue']}; "
+            f"font-size: 12px; padding: 6px;"
+        )
+
+    def mousePressEvent(self, e):
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Wybierz obraz", "",
+            "Obrazy (*.png *.jpg *.jpeg *.bmp *.tiff)"
+        )
+        if path:
+            self.file_dropped.emit(path)
+
+    def dragEnterEvent(self, e: QDragEnterEvent):
+        if e.mimeData().hasUrls():
+            e.acceptProposedAction()
+            self._hover()
+
+    def dragLeaveEvent(self, e):
+        self._normal()
+
+    def dropEvent(self, e: QDropEvent):
+        self._normal()
+        urls = e.mimeData().urls()
+        if urls:
+            p = urls[0].toLocalFile()
+            if p.lower().endswith((".png", ".jpg", ".jpeg", ".bmp", ".tiff")):
+                self.file_dropped.emit(p)
+
+
+def make_divider() -> QFrame:
+    f = QFrame()
+    f.setFrameShape(QFrame.Shape.HLine)
+    f.setFixedHeight(1)
+    f.setStyleSheet(f"background: {C['border']}; border: none;")
+    return f
 
 
 class MainWindow(QMainWindow):
