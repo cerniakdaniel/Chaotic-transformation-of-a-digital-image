@@ -3,8 +3,8 @@ import os
 import numpy as np
 from PIL import Image
 from PyQt6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout,
-    QLabel, QFrame, QSizePolicy, QFileDialog
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+    QLabel, QFrame, QSizePolicy, QFileDialog, QStatusBar
 )
 from PyQt6.QtGui import QPixmap, QImage, QDragEnterEvent, QDropEvent
 from PyQt6.QtCore import Qt, pyqtSignal
@@ -329,3 +329,88 @@ if __name__ == "__main__":
     w = MainWindow()
     w.show()
     sys.exit(app.exec())
+
+STAGE_DESC = [
+    "Permutacja wierszy i kolumn sterowana kluczem. Prosta i odwracalna — ale lokalna struktura obrazu pozostaje widoczna.",
+    "Permutacja Fisher-Yates sterowana seedem. Każdy piksel ląduje w losowym miejscu. Histogram pozostaje niezmieniony.",
+    "Permutacja + substytucja addytywna:  f(p,k) = (p + S[i]) mod 256.  Zmienia pozycje i wartości pikseli.",
+]
+
+STAGE_ACCENTS = [C['orange'], C['blue'], C['red']]
+
+
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Projekt M-II — Chaotyczne przekształcanie obrazu")
+        self.setMinimumSize(1100, 820)
+        self.setStyleSheet(STYLESHEET)
+        self._build_ui()
+
+    def _build_ui(self):
+        central = QWidget()
+        self.setCentralWidget(central)
+        root = QVBoxLayout(central)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+
+        # Nagłówek
+        header = QFrame()
+        header.setFixedHeight(100)
+        header.setStyleSheet(
+            f"background: {C['header_bg']}; "
+            f"border-bottom: 1px solid {C['border']};"
+        )
+        hl = QHBoxLayout(header)
+        hl.setContentsMargins(24, 0, 24, 0)
+        hl.setSpacing(16)
+
+        logo_pix = QPixmap("uwb.png")
+        logo = QLabel()
+        if not logo_pix.isNull():
+            logo.setPixmap(logo_pix.scaled(
+                144, 144,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation
+            ))
+        else:
+            logo.setText("LOGO")
+            logo.setFixedSize(44, 44)
+            logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            logo.setStyleSheet(
+                f"border: 2px dashed {C['border_hi']}; border-radius: 8px; "
+                f"background: {C['bg_card']}; color: {C['text_dim']}; "
+                f"font-size: 9px; font-weight: bold;"
+            )
+        hl.addWidget(logo)
+
+        t_col = QVBoxLayout()
+        t_col.setSpacing(3)
+        t1 = QLabel("PROJEKT M-II")
+        t1.setStyleSheet(
+            f"color: {C['text']}; font-size: 20px; "
+            f"font-weight: bold; letter-spacing: 5px;"
+        )
+        t2 = QLabel("Chaotyczne przekształcanie obrazu cyfrowego")
+        t2.setStyleSheet(f"color: {C['text_muted']}; font-size: 15px;")
+        t_col.addWidget(t1)
+        t_col.addWidget(t2)
+        hl.addLayout(t_col)
+        hl.addStretch()
+
+        pill = QLabel("    Daniel Czerniak\n  Informatyka II rok  ")
+        pill.setStyleSheet(
+            f"color: {C['blue']}; font-size: 10px; font-weight: bold; "
+            f"letter-spacing: 1px; border: 1px solid {C['border_hi']}; "
+            f"border-radius: 10px; padding: 3px 8px; background: {C['bg_card']};"
+        )
+        hl.addWidget(pill)
+        root.addWidget(header)
+
+        sb = QStatusBar()
+        sb.showMessage("Gotowy. Wczytaj obraz przeciągając go lub klikając strefę wczytywania.")
+        self.setStatusBar(sb)
+        self._sb = sb
+
+    def _status(self, msg: str):
+        self._sb.showMessage(msg)
