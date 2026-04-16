@@ -4,7 +4,8 @@ import numpy as np
 from PIL import Image
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QLabel, QFrame, QSizePolicy, QFileDialog, QStatusBar
+    QLabel, QPushButton, QSpinBox, QFileDialog, QTabWidget,
+    QTextEdit, QFrame, QSizePolicy, QStatusBar, QScrollArea
 )
 from PyQt6.QtGui import QPixmap, QImage, QDragEnterEvent, QDropEvent
 from PyQt6.QtCore import Qt, pyqtSignal
@@ -414,3 +415,52 @@ class MainWindow(QMainWindow):
 
     def _status(self, msg: str):
         self._sb.showMessage(msg)
+
+class StageTab(QWidget):
+    status_message = pyqtSignal(str)
+
+    def __init__(self, stage_num: int, parent=None):
+        super().__init__(parent)
+        self.stage_num       = stage_num
+        self.original_arr    = None
+        self.scrambled_arr   = None
+        self.unscrambled_arr = None
+        self._build_ui()
+
+    def _build_ui(self):
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        outer.addWidget(scroll)
+
+        container = QWidget()
+        scroll.setWidget(container)
+
+        root = QVBoxLayout(container)
+        root.setContentsMargins(20, 20, 20, 20)
+        root.setSpacing(16)
+
+        accent = STAGE_ACCENTS[self.stage_num - 1]
+
+        # Opis etapu
+        desc_row = QHBoxLayout()
+        indicator = QFrame()
+        indicator.setFixedWidth(4)
+        indicator.setStyleSheet(
+            f"background: {accent}; border-radius: 2px; border: none;"
+        )
+        desc_row.addWidget(indicator)
+        desc_lbl = QLabel(STAGE_DESC[self.stage_num - 1])
+        desc_lbl.setWordWrap(True)
+        desc_lbl.setStyleSheet(
+            f"color: {C['text_muted']}; font-size: 11px; "
+            f"padding: 4px 12px; background: transparent;"
+        )
+        desc_row.addWidget(desc_lbl)
+        root.addLayout(desc_row)
+        root.addWidget(make_divider())
+        root.addStretch()
