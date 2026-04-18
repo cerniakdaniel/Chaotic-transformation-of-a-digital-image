@@ -464,3 +464,62 @@ class StageTab(QWidget):
         root.addLayout(desc_row)
         root.addWidget(make_divider())
         root.addStretch()
+	ctrl = QHBoxLayout()
+        ctrl.setSpacing(14)
+
+        dz_col = QVBoxLayout()
+        dz_lbl = QLabel("WCZYTAJ OBRAZ")
+        dz_lbl.setStyleSheet(
+            f"color: {C['text_dim']}; font-size: 10px; "
+            f"font-weight: bold; letter-spacing: 1px;"
+        )
+        dz_col.addWidget(dz_lbl)
+        self.drop_zone = DropZone()
+        self.drop_zone.file_dropped.connect(self._on_file)
+        dz_col.addWidget(self.drop_zone)
+        ctrl.addLayout(dz_col, stretch=3)
+
+        key_col = QVBoxLayout()
+        key_col.setSpacing(6)
+        kl = QLabel("KLUCZ POPRAWNY")
+        kl.setStyleSheet(
+            f"color: {C['text_dim']}; font-size: 10px; "
+            f"font-weight: bold; letter-spacing: 1px;"
+        )
+        key_col.addWidget(kl)
+        self.key_input = QSpinBox()
+        self.key_input.setRange(0, 2**30)
+        self.key_input.setValue(42)
+        key_col.addWidget(self.key_input)
+        ctrl.addLayout(key_col, stretch=1)
+
+        wkey_col = QVBoxLayout()
+        wkey_col.setSpacing(6)
+        wkl = QLabel("KLUCZ BŁĘDNY")
+        wkl.setStyleSheet(
+            f"color: {C['red']}; font-size: 10px; "
+            f"font-weight: bold; letter-spacing: 1px;"
+        )
+        wkey_col.addWidget(wkl)
+        self.wrong_key = QSpinBox()
+        self.wrong_key.setRange(0, 2**30)
+        self.wrong_key.setValue(43)
+        wkey_col.addWidget(self.wrong_key)
+        ctrl.addLayout(wkey_col, stretch=1)
+
+        root.addLayout(ctrl)
+        root.addWidget(make_divider())
+
+        # Oryginał duży
+        self.panel_orig = ImagePanel("ORYGINAŁ", C['blue'], fixed_height=320)
+        root.addWidget(self.panel_orig)
+
+        # Trzy małe panele
+        small_row = QHBoxLayout()
+        small_row.setSpacing(12)
+        self.panel_scrambled = ImagePanel("PO SCRAMBLE", accent, fixed_height=200)
+        self.panel_restored  = ImagePanel("UNSCRAMBLE — POPRAWNY KLUCZ", C['green'], fixed_height=200)
+        self.panel_wrong_img = ImagePanel("UNSCRAMBLE — BŁĘDNY KLUCZ", C['red'], fixed_height=200)
+        for p in (self.panel_scrambled, self.panel_restored, self.panel_wrong_img):
+            small_row.addWidget(p)
+        root.addLayout(small_row)
