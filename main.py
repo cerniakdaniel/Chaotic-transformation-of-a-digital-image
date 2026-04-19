@@ -11,21 +11,21 @@ from PyQt6.QtGui import QPixmap, QImage, QDragEnterEvent, QDropEvent
 from PyQt6.QtCore import Qt, pyqtSignal
 
 C = {
-    "bg":          "#0B0F1A",
-    "bg_panel":    "#111827",
-    "bg_card":     "#1A2234",
-    "bg_card2":    "#1E2A40",
-    "border":      "#2A3A55",
-    "border_hi":   "#3D5280",
-    "text":        "#E8EDF5",
-    "text_muted":  "#6B7FA3",
-    "text_dim":    "#3D5280",
-    "blue":        "#4A90D9",
-    "blue_dark":   "#2D6BAD",
-    "green":       "#3DAA6E",
-    "red":         "#D94A4A",
-    "orange":      "#D98C4A",
-    "header_bg":   "#0D1220",
+    "bg": "#0B0F1A",
+    "bg_panel": "#111827",
+    "bg_card": "#1A2234",
+    "bg_card2": "#1E2A40",
+    "border": "#2A3A55",
+    "border_hi": "#3D5280",
+    "text": "#E8EDF5",
+    "text_muted": "#6B7FA3",
+    "text_dim": "#3D5280",
+    "blue": "#4A90D9",
+    "blue_dark": "#2D6BAD",
+    "green": "#3DAA6E",
+    "red": "#D94A4A",
+    "orange": "#D98C4A",
+    "header_bg": "#0D1220",
 }
 
 STYLESHEET = f"""
@@ -234,9 +234,11 @@ class ImagePanel(QFrame):
             self.img_lbl.setPixmap(QPixmap())
             self.info_lbl.setText("")
             return
+
         pix = numpy_to_qpixmap(arr)
         target_w = self.img_lbl.width() - 8
         target_h = self.img_lbl.height() - 8
+
         if target_w > 10 and target_h > 10:
             scaled = pix.scaled(
                 target_w, target_h,
@@ -244,6 +246,7 @@ class ImagePanel(QFrame):
                 Qt.TransformationMode.SmoothTransformation
             )
             self.img_lbl.setPixmap(scaled)
+
         self.info_lbl.setText(info)
 
     def resizeEvent(self, event):
@@ -253,6 +256,7 @@ class ImagePanel(QFrame):
 
     def get_array(self):
         return self._arr
+
 
 class DropZone(QLabel):
     file_dropped = pyqtSignal(str)
@@ -314,23 +318,6 @@ def make_divider() -> QFrame:
     return f
 
 
-class MainWindow(QMainWindow):
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("Projekt M-II — Chaotyczne przekształcanie obrazu")
-        self.setMinimumSize(1100, 820)
-        self.setStyleSheet(STYLESHEET)
-        central = QWidget()
-        self.setCentralWidget(central)
-
-
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    app.setStyle("Fusion")
-    w = MainWindow()
-    w.show()
-    sys.exit(app.exec())
-
 STAGE_DESC = [
     "Permutacja wierszy i kolumn sterowana kluczem. Prosta i odwracalna — ale lokalna struktura obrazu pozostaje widoczna.",
     "Permutacja Fisher-Yates sterowana seedem. Każdy piksel ląduje w losowym miejscu. Histogram pozostaje niezmieniony.",
@@ -351,23 +338,25 @@ class MainWindow(QMainWindow):
     def _build_ui(self):
         central = QWidget()
         self.setCentralWidget(central)
+
         root = QVBoxLayout(central)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
 
-        # Nagłówek
         header = QFrame()
         header.setFixedHeight(100)
         header.setStyleSheet(
             f"background: {C['header_bg']}; "
             f"border-bottom: 1px solid {C['border']};"
         )
+
         hl = QHBoxLayout(header)
         hl.setContentsMargins(24, 0, 24, 0)
         hl.setSpacing(16)
 
         logo_pix = QPixmap("uwb.png")
         logo = QLabel()
+
         if not logo_pix.isNull():
             logo.setPixmap(logo_pix.scaled(
                 144, 144,
@@ -383,19 +372,24 @@ class MainWindow(QMainWindow):
                 f"background: {C['bg_card']}; color: {C['text_dim']}; "
                 f"font-size: 9px; font-weight: bold;"
             )
+
         hl.addWidget(logo)
 
         t_col = QVBoxLayout()
         t_col.setSpacing(3)
+
         t1 = QLabel("PROJEKT M-II")
         t1.setStyleSheet(
             f"color: {C['text']}; font-size: 20px; "
             f"font-weight: bold; letter-spacing: 5px;"
         )
+
         t2 = QLabel("Chaotyczne przekształcanie obrazu cyfrowego")
         t2.setStyleSheet(f"color: {C['text_muted']}; font-size: 15px;")
+
         t_col.addWidget(t1)
         t_col.addWidget(t2)
+
         hl.addLayout(t_col)
         hl.addStretch()
 
@@ -406,7 +400,18 @@ class MainWindow(QMainWindow):
             f"border-radius: 10px; padding: 3px 8px; background: {C['bg_card']};"
         )
         hl.addWidget(pill)
+
         root.addWidget(header)
+
+        tabs = QTabWidget()
+        self.tabs = tabs
+
+        for i in range(1, 4):
+            tab = StageTab(i)
+            tab.status_message.connect(self._status)
+            tabs.addTab(tab, f"ETAP {i}")
+
+        root.addWidget(tabs)
 
         sb = QStatusBar()
         sb.showMessage("Gotowy. Wczytaj obraz przeciągając go lub klikając strefę wczytywania.")
@@ -416,14 +421,15 @@ class MainWindow(QMainWindow):
     def _status(self, msg: str):
         self._sb.showMessage(msg)
 
+
 class StageTab(QWidget):
     status_message = pyqtSignal(str)
 
     def __init__(self, stage_num: int, parent=None):
         super().__init__(parent)
-        self.stage_num       = stage_num
-        self.original_arr    = None
-        self.scrambled_arr   = None
+        self.stage_num = stage_num
+        self.original_arr = None
+        self.scrambled_arr = None
         self.unscrambled_arr = None
         self._build_ui()
 
@@ -446,14 +452,15 @@ class StageTab(QWidget):
 
         accent = STAGE_ACCENTS[self.stage_num - 1]
 
-        # Opis etapu
         desc_row = QHBoxLayout()
+
         indicator = QFrame()
         indicator.setFixedWidth(4)
         indicator.setStyleSheet(
             f"background: {accent}; border-radius: 2px; border: none;"
         )
         desc_row.addWidget(indicator)
+
         desc_lbl = QLabel(STAGE_DESC[self.stage_num - 1])
         desc_lbl.setWordWrap(True)
         desc_lbl.setStyleSheet(
@@ -461,65 +468,159 @@ class StageTab(QWidget):
             f"padding: 4px 12px; background: transparent;"
         )
         desc_row.addWidget(desc_lbl)
+
         root.addLayout(desc_row)
         root.addWidget(make_divider())
-        root.addStretch()
-	ctrl = QHBoxLayout()
+
+        ctrl = QHBoxLayout()
         ctrl.setSpacing(14)
 
         dz_col = QVBoxLayout()
+
         dz_lbl = QLabel("WCZYTAJ OBRAZ")
         dz_lbl.setStyleSheet(
             f"color: {C['text_dim']}; font-size: 10px; "
             f"font-weight: bold; letter-spacing: 1px;"
         )
         dz_col.addWidget(dz_lbl)
+
         self.drop_zone = DropZone()
         self.drop_zone.file_dropped.connect(self._on_file)
         dz_col.addWidget(self.drop_zone)
+
         ctrl.addLayout(dz_col, stretch=3)
 
         key_col = QVBoxLayout()
         key_col.setSpacing(6)
+
         kl = QLabel("KLUCZ POPRAWNY")
         kl.setStyleSheet(
             f"color: {C['text_dim']}; font-size: 10px; "
             f"font-weight: bold; letter-spacing: 1px;"
         )
         key_col.addWidget(kl)
+
         self.key_input = QSpinBox()
         self.key_input.setRange(0, 2**30)
         self.key_input.setValue(42)
         key_col.addWidget(self.key_input)
+
         ctrl.addLayout(key_col, stretch=1)
 
         wkey_col = QVBoxLayout()
         wkey_col.setSpacing(6)
+
         wkl = QLabel("KLUCZ BŁĘDNY")
         wkl.setStyleSheet(
             f"color: {C['red']}; font-size: 10px; "
             f"font-weight: bold; letter-spacing: 1px;"
         )
         wkey_col.addWidget(wkl)
+
         self.wrong_key = QSpinBox()
         self.wrong_key.setRange(0, 2**30)
         self.wrong_key.setValue(43)
         wkey_col.addWidget(self.wrong_key)
+
         ctrl.addLayout(wkey_col, stretch=1)
 
         root.addLayout(ctrl)
         root.addWidget(make_divider())
 
-        # Oryginał duży
         self.panel_orig = ImagePanel("ORYGINAŁ", C['blue'], fixed_height=320)
         root.addWidget(self.panel_orig)
 
-        # Trzy małe panele
         small_row = QHBoxLayout()
         small_row.setSpacing(12)
+
         self.panel_scrambled = ImagePanel("PO SCRAMBLE", accent, fixed_height=200)
-        self.panel_restored  = ImagePanel("UNSCRAMBLE — POPRAWNY KLUCZ", C['green'], fixed_height=200)
+        self.panel_restored = ImagePanel("UNSCRAMBLE — POPRAWNY KLUCZ", C['green'], fixed_height=200)
         self.panel_wrong_img = ImagePanel("UNSCRAMBLE — BŁĘDNY KLUCZ", C['red'], fixed_height=200)
+
         for p in (self.panel_scrambled, self.panel_restored, self.panel_wrong_img):
             small_row.addWidget(p)
+
         root.addLayout(small_row)
+
+        # Przyciski
+        btn_row = QHBoxLayout()
+        btn_row.setSpacing(10)
+
+        self.btn_scramble = QPushButton("🔀  Scramble")
+        self.btn_unscramble = QPushButton("🔓  Unscramble — poprawny klucz")
+        self.btn_wrong_un = QPushButton("❌  Unscramble — błędny klucz")
+        self.btn_save = QPushButton("💾  Zapisz wyniki")
+
+        self.btn_unscramble.setObjectName("btn_green")
+        self.btn_wrong_un.setObjectName("btn_red")
+        self.btn_save.setObjectName("btn_neutral")
+
+        self.btn_scramble.clicked.connect(self.do_scramble)
+        self.btn_unscramble.clicked.connect(self.do_unscramble)
+        self.btn_wrong_un.clicked.connect(self.do_wrong_unscramble)
+        self.btn_save.clicked.connect(self.save_results)
+
+        for b in (
+            self.btn_scramble,
+            self.btn_unscramble,
+            self.btn_wrong_un,
+            self.btn_save
+        ):
+            b.setFixedHeight(40)
+            btn_row.addWidget(b)
+
+        root.addLayout(btn_row)
+        root.addWidget(make_divider())
+
+        metrics_lbl = QLabel("METRYKI")
+        metrics_lbl.setStyleSheet(
+            f"color: {C['text_dim']}; font-size: 10px; "
+            f"font-weight: bold; letter-spacing: 1px;"
+        )
+        root.addWidget(metrics_lbl)
+
+        self.metrics_box = QTextEdit()
+        self.metrics_box.setReadOnly(True)
+        self.metrics_box.setFixedHeight(160)
+        self.metrics_box.setPlaceholderText(
+            "Metryki pojawią się tutaj po wykonaniu operacji…"
+        )
+        root.addWidget(self.metrics_box)
+
+        root.addStretch()
+
+    def _on_file(self, path: str):
+        self.original_arr = load_image(path)
+        self.scrambled_arr = None
+        self.unscrambled_arr = None
+
+        h, w = self.original_arr.shape[:2]
+        name = os.path.basename(path)
+
+        self.panel_orig.set_image(self.original_arr, f"{name}  ·  {w} × {h} px")
+        self.panel_scrambled.set_image(None)
+        self.panel_restored.set_image(None)
+        self.panel_wrong_img.set_image(None)
+        self.metrics_box.clear()
+
+        self.status_message.emit(f"Wczytano: {name}  [{w}×{h}]")
+
+    def do_scramble(self):
+        self.status_message.emit("Funkcja scramble nie jest jeszcze dopisana.")
+
+    def do_unscramble(self):
+        self.status_message.emit("Funkcja unscramble nie jest jeszcze dopisana.")
+
+    def do_wrong_unscramble(self):
+        self.status_message.emit("Funkcja błędnego unscramble nie jest jeszcze dopisana.")
+
+    def save_results(self):
+        self.status_message.emit("Funkcja zapisu nie jest jeszcze dopisana.")
+
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    app.setStyle("Fusion")
+    w = MainWindow()
+    w.show()
+    sys.exit(app.exec())
