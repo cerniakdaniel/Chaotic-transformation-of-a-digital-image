@@ -552,39 +552,58 @@ class StageTab(QWidget):
         root.addStretch()
 
     def _on_file(self, path: str):
-        self.original_arr    = load_image(path)
-        self.scrambled_arr   = None
+        self.original_arr = load_image(path)
+        self.scrambled_arr = None
         self.unscrambled_arr = None
+
         h, w = self.original_arr.shape[:2]
         name = os.path.basename(path)
+
         self.panel_orig.set_image(self.original_arr, f"{name}  ·  {w} × {h} px")
         self.panel_scrambled.set_image(None)
         self.panel_restored.set_image(None)
         self.panel_wrong_img.set_image(None)
+
         self.metrics_box.clear()
         self.status_message.emit(f"Wczytano: {name}  [{w}×{h}]")
 
     def _sc(self, arr, key):
-        return stage1.scramble(arr, key)
+        if self.stage_num == 1:
+            return stage1.scramble(arr, key)
+        elif self.stage_num == 2:
+            return stage2.scramble(arr, key)
+        else:
+            return stage2.scramble(arr, key)
 
     def _un(self, arr, key):
-        return stage1.unscramble(arr, key)
+        if self.stage_num == 1:
+            return stage1.unscramble(arr, key)
+        elif self.stage_num == 2:
+            return stage2.unscramble(arr, key)
+        else:
+            return stage2.unscramble(arr, key)
 
     def do_scramble(self):
         if self.original_arr is None:
             self.status_message.emit("⚠  Najpierw wczytaj obraz!")
             return
+
         key = self.key_input.value()
         self.scrambled_arr = self._sc(self.original_arr, key)
+
         self.panel_scrambled.set_image(self.scrambled_arr)
-        self.status_message.emit(f"Etap {self.stage_num} · Scramble wykonany (klucz = {key})")
+        self.status_message.emit(
+            f"Etap {self.stage_num} · Scramble wykonany (klucz = {key})"
+        )
 
     def do_unscramble(self):
         if self.scrambled_arr is None:
             self.status_message.emit("⚠  Najpierw wykonaj Scramble!")
             return
+
         key = self.key_input.value()
         self.unscrambled_arr = self._un(self.scrambled_arr, key)
+
         self.panel_restored.set_image(self.unscrambled_arr)
         self.status_message.emit("Unscramble wykonany")
 
@@ -592,8 +611,10 @@ class StageTab(QWidget):
         if self.scrambled_arr is None:
             self.status_message.emit("⚠  Najpierw wykonaj Scramble!")
             return
+
         wk = self.wrong_key.value()
         wrong = self._un(self.scrambled_arr, wk)
+
         self.panel_wrong_img.set_image(wrong)
         self.status_message.emit(f"Unscramble błędnym kluczem = {wk}")
 
@@ -601,13 +622,26 @@ class StageTab(QWidget):
         if self.scrambled_arr is None:
             self.status_message.emit("⚠  Brak wyników do zapisania.")
             return
+
         folder = QFileDialog.getExistingDirectory(self, "Wybierz folder zapisu")
         if not folder:
             return
-        save_image(self.original_arr,  f"{folder}/etap{self.stage_num}_oryginal.png")
-        save_image(self.scrambled_arr, f"{folder}/etap{self.stage_num}_scrambled.png")
+
+        save_image(
+            self.original_arr,
+            f"{folder}/etap{self.stage_num}_oryginal.png"
+        )
+        save_image(
+            self.scrambled_arr,
+            f"{folder}/etap{self.stage_num}_scrambled.png"
+        )
+
         if self.unscrambled_arr is not None:
-            save_image(self.unscrambled_arr, f"{folder}/etap{self.stage_num}_unscrambled.png")
+            save_image(
+                self.unscrambled_arr,
+                f"{folder}/etap{self.stage_num}_unscrambled.png"
+            )
+
         self.status_message.emit(f"✅  Zapisano wyniki → {folder}")
 
 
