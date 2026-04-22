@@ -11,6 +11,8 @@ from PyQt6.QtGui import QPixmap, QImage, QDragEnterEvent, QDropEvent
 from PyQt6.QtCore import Qt, pyqtSignal
 
 import stage1
+import stage2
+import stage3
 
 C = {
     "bg": "#0B0F1A",
@@ -551,7 +553,7 @@ class StageTab(QWidget):
         root.addWidget(self.metrics_box)
         root.addStretch()
 
-    def _on_file(self, path: str):
+      def _on_file(self, path: str):
         self.original_arr = load_image(path)
         self.scrambled_arr = None
         self.unscrambled_arr = None
@@ -568,20 +570,10 @@ class StageTab(QWidget):
         self.status_message.emit(f"Wczytano: {name}  [{w}×{h}]")
 
     def _sc(self, arr, key):
-        if self.stage_num == 1:
-            return stage1.scramble(arr, key)
-        elif self.stage_num == 2:
-            return stage2.scramble(arr, key)
-        else:
-            return stage2.scramble(arr, key)
+        return [stage1.scramble, stage2.scramble, stage3.scramble][self.stage_num - 1](arr, key)
 
     def _un(self, arr, key):
-        if self.stage_num == 1:
-            return stage1.unscramble(arr, key)
-        elif self.stage_num == 2:
-            return stage2.unscramble(arr, key)
-        else:
-            return stage2.unscramble(arr, key)
+        return [stage1.unscramble, stage2.unscramble, stage3.unscramble][self.stage_num - 1](arr, key)
 
     def do_scramble(self):
         if self.original_arr is None:
