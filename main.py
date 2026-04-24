@@ -655,44 +655,6 @@ class StageTab(QWidget):
             stage3.unscramble
         ][self.stage_num - 1](arr, key)
 
-    def _update_metrics(self):
-        if self.original_arr is None or self.scrambled_arr is None:
-            return
-
-        txt = []
-
-        txt.append(f"ETAP {self.stage_num}")
-        txt.append(f"Rozmiar obrazu: {self.original_arr.shape[1]} × {self.original_arr.shape[0]} px")
-        txt.append(f"Klucz poprawny: {self.key_input.value()}")
-        txt.append(f"Klucz błędny: {self.wrong_key.value()}")
-        txt.append("")
-
-        try:
-            if hasattr(metrics, "mse"):
-                txt.append(f"MSE oryginał vs scramble: {metrics.mse(self.original_arr, self.scrambled_arr):.4f}")
-
-            if hasattr(metrics, "psnr"):
-                txt.append(f"PSNR oryginał vs scramble: {metrics.psnr(self.original_arr, self.scrambled_arr):.4f}")
-
-            if self.unscrambled_arr is not None:
-                if hasattr(metrics, "mse"):
-                    txt.append(f"MSE oryginał vs poprawny unscramble: {metrics.mse(self.original_arr, self.unscrambled_arr):.4f}")
-
-                if hasattr(metrics, "psnr"):
-                    txt.append(f"PSNR oryginał vs poprawny unscramble: {metrics.psnr(self.original_arr, self.unscrambled_arr):.4f}")
-
-            if self.wrong_arr is not None:
-                if hasattr(metrics, "mse"):
-                    txt.append(f"MSE oryginał vs błędny unscramble: {metrics.mse(self.original_arr, self.wrong_arr):.4f}")
-
-                if hasattr(metrics, "psnr"):
-                    txt.append(f"PSNR oryginał vs błędny unscramble: {metrics.psnr(self.original_arr, self.wrong_arr):.4f}")
-
-        except Exception as e:
-            txt.append(f"Błąd liczenia metryk: {e}")
-
-        self.metrics_box.setPlainText("\n".join(txt))
-
     def do_scramble(self):
         if self.original_arr is None:
             self.status_message.emit("⚠  Najpierw wczytaj obraz!")
@@ -701,12 +663,17 @@ class StageTab(QWidget):
         key = self.key_input.value()
         self.scrambled_arr = self._sc(self.original_arr, key)
 
-        self.panel_scrambled.set_image(self.scrambled_arr)
-        self._update_metrics()
+        corr = metrics.pixel_correlation(self.scrambled_arr)
+        self.panel_scrambled.set_image(
+            self.scrambled_arr,
+            f"Korelacja H: {corr:.5f}"
+        )
 
         self.status_message.emit(
-            f"Etap {self.stage_num} · Scramble wykonany (klucz = {key})"
+            f"Etap {self.stage_num} · Scramble wykonany  (klucz = {key})"
         )
+
+        self._refresh_metrics()
 
     def do_unscramble(self):
         if self.scrambled_arr is None:
@@ -716,10 +683,18 @@ class StageTab(QWidget):
         key = self.key_input.value()
         self.unscrambled_arr = self._un(self.scrambled_arr, key)
 
-        self.panel_restored.set_image(self.unscrambled_arr)
-        self._update_metrics()
+        mad = metrics.mean_absolute_diff(self.original_arr, self.unscrambled_arr)
+        ok = mad == 0.0
 
-        self.status_message.emit("Unscramble wykonany")
+        info = "✅  IDENTYCZNY Z ORYGINAŁEM" if ok else f"⚠  Różnica MAD = {mad:.3f}"
+
+        self.panel_restored.set_image(self.unscrambled_arr, info)
+
+        self.status_message.emit(
+            f"Unscramble (poprawny klucz): {'IDENTYCZNY' if ok else f'MAD={mad:.3f}'}"
+        )
+
+        self._refresh_metrics()
 
     def do_wrong_unscramble(self):
         if self.scrambled_arr is None:
@@ -729,10 +704,60 @@ class StageTab(QWidget):
         wk = self.wrong_key.value()
         self.wrong_arr = self._un(self.scrambled_arr, wk)
 
-        self.panel_wrong_img.set_image(self.wrong_arr)
-        self._update_metrics()
+        mad = metrics.mean_absolute_diff(self.original_arr, self.wrong_arr)
 
-        self.status_message.emit(f"Unscramble błędnym kluczem = {wk}")
+        self.panel_wrong_img.set_image(
+            self.wrong_arr,
+            f"❌  MAD = {mad:.1f}  (klucz = {wk})"
+        )
+
+        self.status_message.emit(
+            f"Unscramble (błędny klucz = {wk}): MAD = {mad:.1f}"
+        )
+
+        self._refresh_metrics(wrong_arr=self.wrong_arr)
+
+    def _refresh_metrics(self, wrong_arr=None):
+        if self.original_arr is None or self.scrambled_arr is None:
+            return
+
+        orig = self.original_arr
+        scr = self.scrambled_arr
+        uns = self.unscrambled_arr
+
+        lines = [
+            f"═══  ETAP {self.stage_num} — METRYKI  ═══",
+            "",
+            "  KORELACJA SĄSIEDNICH PIKSELI (kanał R):",
+            f"    Oryginał   [poziomo] :  {metrics.pixel_correlation(orig, 'horizontal'):>9.5f}",
+            f"    Scrambled  [poziomo] :  {metrics.pixel_correlation(scr,  'horizontal'):>9.5f}",
+            f"    Oryginał   [pionowo] :  {metrics.pixel_correlation(orig, 'vertical'):>9.5f}",
+            f"    Scrambled  [pionowo] :  {metrics.pixel_correlation(scr,  'vertical'):>9.5f}",
+            "",
+            "  ENTROPIA SHANNONA (bity/piksel):",
+            f"    Oryginał  :  {metrics.entropy(orig):>7.4f}",
+            f"    Scrambled :  {metrics.entropy(scr):>7.4f}",
+        ]
+
+        if uns is not None:
+            mad = metrics.mean_absolute_diff(orig, uns)
+
+            lines += [
+                "",
+                "  ODWRACALNOŚĆ:",
+                f"    MAD (poprawny klucz) :  {mad:.6f}"
+                + ("  ←  idealne odtworzenie ✓" if mad == 0 else "  ←  BŁĄD ✗"),
+            ]
+
+        if wrong_arr is not None:
+            mad_w = metrics.mean_absolute_diff(orig, wrong_arr)
+
+            lines.append(
+                f"    MAD (błędny klucz)   :  {mad_w:.4f}"
+                + ("  ←  wysoka wrażliwość ✓" if mad_w > 50 else "  ←  niska wrażliwość !")
+            )
+
+        self.metrics_box.setText("\n".join(lines))
 
     def save_results(self):
         if self.scrambled_arr is None:
