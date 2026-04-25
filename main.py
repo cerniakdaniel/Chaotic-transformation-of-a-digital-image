@@ -1,7 +1,15 @@
+"""
+Projekt M-II – GUI
+Motyw: ciemny granatowy/czarny elegancki.
+Układ: oryginał duży na górze, 3 obrazy pod spodem.
+Przyciski pod obrazami.
+"""
+
 import sys
 import os
 import numpy as np
 from PIL import Image
+
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QSpinBox, QFileDialog, QTabWidget,
@@ -17,23 +25,22 @@ import metrics
 
 
 C = {
-    "bg": "#0B0F1A",
-    "bg_panel": "#111827",
-    "bg_card": "#1A2234",
-    "bg_card2": "#1E2A40",
-    "border": "#2A3A55",
-    "border_hi": "#3D5280",
-    "text": "#E8EDF5",
-    "text_muted": "#6B7FA3",
-    "text_dim": "#3D5280",
-    "blue": "#4A90D9",
-    "blue_dark": "#2D6BAD",
-    "green": "#3DAA6E",
-    "red": "#D94A4A",
-    "orange": "#D98C4A",
-    "header_bg": "#0D1220",
+    "bg":          "#0B0F1A",
+    "bg_panel":    "#111827",
+    "bg_card":     "#1A2234",
+    "bg_card2":    "#1E2A40",
+    "border":      "#2A3A55",
+    "border_hi":   "#3D5280",
+    "text":        "#E8EDF5",
+    "text_muted":  "#6B7FA3",
+    "text_dim":    "#3D5280",
+    "blue":        "#4A90D9",
+    "blue_dark":   "#2D6BAD",
+    "green":       "#3DAA6E",
+    "red":         "#D94A4A",
+    "orange":      "#D98C4A",
+    "header_bg":   "#0D1220",
 }
-
 
 STYLESHEET = f"""
 QMainWindow, QWidget {{
@@ -159,29 +166,33 @@ QStatusBar {{
 """
 
 
+# ─────────────────────────────────────────
+#  Pomocnicze
+# ─────────────────────────────────────────
+
 def numpy_to_qpixmap(arr: np.ndarray) -> QPixmap:
     arr = np.ascontiguousarray(arr)
     h, w, c = arr.shape
     qimg = QImage(arr.data, w, h, w * c, QImage.Format.Format_RGB888)
     return QPixmap.fromImage(qimg)
 
-
 def load_image(path: str) -> np.ndarray:
     return np.array(Image.open(path).convert("RGB"), dtype=np.uint8)
-
 
 def save_image(arr: np.ndarray, path: str):
     Image.fromarray(arr).save(path)
 
 
+# ─────────────────────────────────────────
+#  Panel obrazu
+# ─────────────────────────────────────────
+
 class ImagePanel(QFrame):
-    def __init__(self, title: str, accent: str = None, fixed_height: int = 260, parent=None):
+    def __init__(self, title: str, accent: str = None,
+                 fixed_height: int = 260, parent=None):
         super().__init__(parent)
-
-        self._accent = accent or C["blue"]
+        self._accent = accent or C['blue']
         self._info_text = ""
-        self._arr = None
-
         self.setStyleSheet(f"""
             QFrame {{
                 background: {C['bg_card']};
@@ -217,8 +228,7 @@ class ImagePanel(QFrame):
         self.img_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.img_lbl.setFixedHeight(fixed_height)
         self.img_lbl.setSizePolicy(
-            QSizePolicy.Policy.Expanding,
-            QSizePolicy.Policy.Fixed
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
         )
         self.img_lbl.setStyleSheet(
             f"border: 1px solid {C['border']}; border-radius: 8px; "
@@ -235,30 +245,26 @@ class ImagePanel(QFrame):
         inner.addWidget(self.info_lbl)
 
         root.addLayout(inner)
+        self._arr = None
 
     def set_image(self, arr, info: str = ""):
         self._arr = arr
         self._info_text = info
-
         if arr is None:
             self.img_lbl.setText("Brak obrazu")
             self.img_lbl.setPixmap(QPixmap())
             self.info_lbl.setText("")
             return
-
         pix = numpy_to_qpixmap(arr)
         target_w = self.img_lbl.width() - 8
         target_h = self.img_lbl.height() - 8
-
         if target_w > 10 and target_h > 10:
             scaled = pix.scaled(
-                target_w,
-                target_h,
+                target_w, target_h,
                 Qt.AspectRatioMode.KeepAspectRatio,
                 Qt.TransformationMode.SmoothTransformation
             )
             self.img_lbl.setPixmap(scaled)
-
         self.info_lbl.setText(info)
 
     def resizeEvent(self, event):
@@ -270,12 +276,15 @@ class ImagePanel(QFrame):
         return self._arr
 
 
+# ─────────────────────────────────────────
+#  Drag & Drop
+# ─────────────────────────────────────────
+
 class DropZone(QLabel):
     file_dropped = pyqtSignal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
-
         self.setAcceptDrops(True)
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.setFixedHeight(52)
@@ -300,12 +309,9 @@ class DropZone(QLabel):
 
     def mousePressEvent(self, e):
         path, _ = QFileDialog.getOpenFileName(
-            self,
-            "Wybierz obraz",
-            "",
+            self, "Wybierz obraz", "",
             "Obrazy (*.png *.jpg *.jpeg *.bmp *.tiff)"
         )
-
         if path:
             self.file_dropped.emit(path)
 
@@ -319,13 +325,16 @@ class DropZone(QLabel):
 
     def dropEvent(self, e: QDropEvent):
         self._normal()
-
         urls = e.mimeData().urls()
         if urls:
             p = urls[0].toLocalFile()
             if p.lower().endswith((".png", ".jpg", ".jpeg", ".bmp", ".tiff")):
                 self.file_dropped.emit(p)
 
+
+# ─────────────────────────────────────────
+#  Separator
+# ─────────────────────────────────────────
 
 def make_divider() -> QFrame:
     f = QFrame()
@@ -335,127 +344,32 @@ def make_divider() -> QFrame:
     return f
 
 
+# ─────────────────────────────────────────
+#  Opisy etapów
+# ─────────────────────────────────────────
+
 STAGE_DESC = [
     "Permutacja wierszy i kolumn sterowana kluczem. Prosta i odwracalna — ale lokalna struktura obrazu pozostaje widoczna.",
     "Permutacja Fisher-Yates sterowana seedem. Każdy piksel ląduje w losowym miejscu. Histogram pozostaje niezmieniony.",
     "Permutacja + substytucja addytywna:  f(p,k) = (p + S[i]) mod 256.  Zmienia pozycje i wartości pikseli.",
 ]
 
-STAGE_ACCENTS = [C["orange"], C["blue"], C["red"]]
+STAGE_ACCENTS = [C['orange'], C['blue'], C['red']]
 
 
-class MainWindow(QMainWindow):
-    def __init__(self):
-        super().__init__()
-
-        self.setWindowTitle("Projekt M-II — Chaotyczne przekształcanie obrazu")
-        self.setMinimumSize(1100, 820)
-        self.setStyleSheet(STYLESHEET)
-
-        self._build_ui()
-
-    def _build_ui(self):
-        central = QWidget()
-        self.setCentralWidget(central)
-
-        root = QVBoxLayout(central)
-        root.setContentsMargins(0, 0, 0, 0)
-        root.setSpacing(0)
-
-        header = QFrame()
-        header.setFixedHeight(100)
-        header.setStyleSheet(
-            f"background: {C['header_bg']}; "
-            f"border-bottom: 1px solid {C['border']};"
-        )
-
-        hl = QHBoxLayout(header)
-        hl.setContentsMargins(24, 0, 24, 0)
-        hl.setSpacing(16)
-
-        logo_pix = QPixmap("uwb.png")
-        logo = QLabel()
-
-        if not logo_pix.isNull():
-            logo.setPixmap(
-                logo_pix.scaled(
-                    144,
-                    144,
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation
-                )
-            )
-        else:
-            logo.setText("LOGO")
-            logo.setFixedSize(44, 44)
-            logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            logo.setStyleSheet(
-                f"border: 2px dashed {C['border_hi']}; border-radius: 8px; "
-                f"background: {C['bg_card']}; color: {C['text_dim']}; "
-                f"font-size: 9px; font-weight: bold;"
-            )
-
-        hl.addWidget(logo)
-
-        t_col = QVBoxLayout()
-        t_col.setSpacing(3)
-
-        t1 = QLabel("PROJEKT M-II")
-        t1.setStyleSheet(
-            f"color: {C['text']}; font-size: 20px; "
-            f"font-weight: bold; letter-spacing: 5px;"
-        )
-
-        t2 = QLabel("Chaotyczne przekształcanie obrazu cyfrowego")
-        t2.setStyleSheet(f"color: {C['text_muted']}; font-size: 15px;")
-
-        t_col.addWidget(t1)
-        t_col.addWidget(t2)
-
-        hl.addLayout(t_col)
-        hl.addStretch()
-
-        pill = QLabel("    Daniel Czerniak\n  Informatyka II rok  ")
-        pill.setStyleSheet(
-            f"color: {C['blue']}; font-size: 10px; font-weight: bold; "
-            f"letter-spacing: 1px; border: 1px solid {C['border_hi']}; "
-            f"border-radius: 10px; padding: 3px 8px; background: {C['bg_card']};"
-        )
-        hl.addWidget(pill)
-
-        root.addWidget(header)
-
-        tabs = QTabWidget()
-        self.tabs = tabs
-
-        for i in range(1, 4):
-            tab = StageTab(i)
-            tab.status_message.connect(self._status)
-            tabs.addTab(tab, f"ETAP {i}")
-
-        root.addWidget(tabs)
-
-        sb = QStatusBar()
-        sb.showMessage("Gotowy. Wczytaj obraz przeciągając go lub klikając strefę wczytywania.")
-        self.setStatusBar(sb)
-        self._sb = sb
-
-    def _status(self, msg: str):
-        self._sb.showMessage(msg)
-
+# ─────────────────────────────────────────
+#  Zakładka etapu
+# ─────────────────────────────────────────
 
 class StageTab(QWidget):
     status_message = pyqtSignal(str)
 
     def __init__(self, stage_num: int, parent=None):
         super().__init__(parent)
-
-        self.stage_num = stage_num
-        self.original_arr = None
-        self.scrambled_arr = None
+        self.stage_num       = stage_num
+        self.original_arr    = None
+        self.scrambled_arr   = None
         self.unscrambled_arr = None
-        self.wrong_arr = None
-
         self._build_ui()
 
     def _build_ui(self):
@@ -477,133 +391,120 @@ class StageTab(QWidget):
 
         accent = STAGE_ACCENTS[self.stage_num - 1]
 
+        # Opis etapu
         desc_row = QHBoxLayout()
-
         indicator = QFrame()
         indicator.setFixedWidth(4)
         indicator.setStyleSheet(
             f"background: {accent}; border-radius: 2px; border: none;"
         )
-
         desc_row.addWidget(indicator)
-
         desc_lbl = QLabel(STAGE_DESC[self.stage_num - 1])
         desc_lbl.setWordWrap(True)
         desc_lbl.setStyleSheet(
             f"color: {C['text_muted']}; font-size: 11px; "
             f"padding: 4px 12px; background: transparent;"
         )
-
         desc_row.addWidget(desc_lbl)
-
         root.addLayout(desc_row)
+
         root.addWidget(make_divider())
 
+        # Panel kontrolny
         ctrl = QHBoxLayout()
         ctrl.setSpacing(14)
 
         dz_col = QVBoxLayout()
-
         dz_lbl = QLabel("WCZYTAJ OBRAZ")
         dz_lbl.setStyleSheet(
             f"color: {C['text_dim']}; font-size: 10px; "
             f"font-weight: bold; letter-spacing: 1px;"
         )
-
         dz_col.addWidget(dz_lbl)
-
         self.drop_zone = DropZone()
         self.drop_zone.file_dropped.connect(self._on_file)
-
         dz_col.addWidget(self.drop_zone)
-
         ctrl.addLayout(dz_col, stretch=3)
 
         key_col = QVBoxLayout()
         key_col.setSpacing(6)
-
         kl = QLabel("KLUCZ POPRAWNY")
         kl.setStyleSheet(
             f"color: {C['text_dim']}; font-size: 10px; "
             f"font-weight: bold; letter-spacing: 1px;"
         )
-
         key_col.addWidget(kl)
-
         self.key_input = QSpinBox()
         self.key_input.setRange(0, 2**30)
         self.key_input.setValue(42)
-
+        self.key_input.setToolTip("Seed używany do Scramble i Unscramble")
         key_col.addWidget(self.key_input)
-
         ctrl.addLayout(key_col, stretch=1)
 
         wkey_col = QVBoxLayout()
         wkey_col.setSpacing(6)
-
         wkl = QLabel("KLUCZ BŁĘDNY")
         wkl.setStyleSheet(
             f"color: {C['red']}; font-size: 10px; "
             f"font-weight: bold; letter-spacing: 1px;"
         )
-
         wkey_col.addWidget(wkl)
-
         self.wrong_key = QSpinBox()
         self.wrong_key.setRange(0, 2**30)
         self.wrong_key.setValue(43)
-
+        self.wrong_key.setToolTip("Inny seed — wynik unscramble będzie chaosem")
         wkey_col.addWidget(self.wrong_key)
-
         ctrl.addLayout(wkey_col, stretch=1)
 
         root.addLayout(ctrl)
         root.addWidget(make_divider())
 
-        self.panel_orig = ImagePanel("ORYGINAŁ", C["blue"], fixed_height=320)
+        # Oryginał — duży
+        self.panel_orig = ImagePanel("ORYGINAŁ", C['blue'], fixed_height=320)
         root.addWidget(self.panel_orig)
 
+        # 3 małe obrazy
         small_row = QHBoxLayout()
         small_row.setSpacing(12)
-
         self.panel_scrambled = ImagePanel("PO SCRAMBLE", accent, fixed_height=200)
-        self.panel_restored = ImagePanel("UNSCRAMBLE — POPRAWNY KLUCZ", C["green"], fixed_height=200)
-        self.panel_wrong_img = ImagePanel("UNSCRAMBLE — BŁĘDNY KLUCZ", C["red"], fixed_height=200)
-
+        self.panel_restored  = ImagePanel("UNSCRAMBLE — POPRAWNY KLUCZ", C['green'], fixed_height=200)
+        self.panel_wrong_img = ImagePanel("UNSCRAMBLE — BŁĘDNY KLUCZ", C['red'], fixed_height=200)
         for p in (self.panel_scrambled, self.panel_restored, self.panel_wrong_img):
             small_row.addWidget(p)
-
         root.addLayout(small_row)
 
+        # Przyciski pod obrazami
         btn_row = QHBoxLayout()
         btn_row.setSpacing(10)
 
-        self.btn_scramble = QPushButton("🔀  Scramble")
+        self.btn_scramble   = QPushButton("🔀  Scramble")
         self.btn_unscramble = QPushButton("🔓  Unscramble — poprawny klucz")
-        self.btn_wrong_un = QPushButton("❌  Unscramble — błędny klucz")
-        self.btn_save = QPushButton("💾  Zapisz wyniki")
+        self.btn_wrong_un   = QPushButton("❌  Unscramble — błędny klucz")
+        self.btn_save       = QPushButton("💾  Zapisz wyniki")
 
         self.btn_unscramble.setObjectName("btn_green")
         self.btn_wrong_un.setObjectName("btn_red")
         self.btn_save.setObjectName("btn_neutral")
+
+        self.btn_scramble.setToolTip("Przekształć obraz używając etapu i klucza")
+        self.btn_unscramble.setToolTip("Odtwórz obraz — powinien być identyczny z oryginałem")
+        self.btn_wrong_un.setToolTip("Próba z błędnym kluczem — wynik to chaos")
+        self.btn_save.setToolTip("Zapisz wszystkie obrazy do folderu")
 
         self.btn_scramble.clicked.connect(self.do_scramble)
         self.btn_unscramble.clicked.connect(self.do_unscramble)
         self.btn_wrong_un.clicked.connect(self.do_wrong_unscramble)
         self.btn_save.clicked.connect(self.save_results)
 
-        for b in (
-            self.btn_scramble,
-            self.btn_unscramble,
-            self.btn_wrong_un,
-            self.btn_save
-        ):
+        for b in (self.btn_scramble, self.btn_unscramble,
+                  self.btn_wrong_un, self.btn_save):
             b.setFixedHeight(40)
             btn_row.addWidget(b)
 
         root.addLayout(btn_row)
         root.addWidget(make_divider())
 
+        # Metryki
         metrics_lbl = QLabel("METRYKI")
         metrics_lbl.setStyleSheet(
             f"color: {C['text_dim']}; font-size: 10px; "
@@ -617,188 +518,272 @@ class StageTab(QWidget):
         self.metrics_box.setPlaceholderText(
             "Metryki pojawią się tutaj po wykonaniu operacji…"
         )
-
         root.addWidget(self.metrics_box)
         root.addStretch()
 
     def _on_file(self, path: str):
-        self.original_arr = load_image(path)
-        self.scrambled_arr = None
+        self.original_arr    = load_image(path)
+        self.scrambled_arr   = None
         self.unscrambled_arr = None
-        self.wrong_arr = None
-
         h, w = self.original_arr.shape[:2]
         name = os.path.basename(path)
-
-        self.panel_orig.set_image(
-            self.original_arr,
-            f"{name}  ·  {w} × {h} px"
-        )
+        self.panel_orig.set_image(self.original_arr, f"{name}  ·  {w} × {h} px")
         self.panel_scrambled.set_image(None)
         self.panel_restored.set_image(None)
         self.panel_wrong_img.set_image(None)
-
         self.metrics_box.clear()
         self.status_message.emit(f"Wczytano: {name}  [{w}×{h}]")
 
     def _sc(self, arr, key):
-        return [
-            stage1.scramble,
-            stage2.scramble,
-            stage3.scramble
-        ][self.stage_num - 1](arr, key)
+        return [stage1.scramble, stage2.scramble, stage3.scramble][self.stage_num - 1](arr, key)
 
     def _un(self, arr, key):
-        return [
-            stage1.unscramble,
-            stage2.unscramble,
-            stage3.unscramble
-        ][self.stage_num - 1](arr, key)
+        return [stage1.unscramble, stage2.unscramble, stage3.unscramble][self.stage_num - 1](arr, key)
 
     def do_scramble(self):
         if self.original_arr is None:
             self.status_message.emit("⚠  Najpierw wczytaj obraz!")
             return
-
         key = self.key_input.value()
         self.scrambled_arr = self._sc(self.original_arr, key)
-
         corr = metrics.pixel_correlation(self.scrambled_arr)
-        self.panel_scrambled.set_image(
-            self.scrambled_arr,
-            f"Korelacja H: {corr:.5f}"
-        )
-
-        self.status_message.emit(
-            f"Etap {self.stage_num} · Scramble wykonany  (klucz = {key})"
-        )
-
+        self.panel_scrambled.set_image(self.scrambled_arr, f"Korelacja H: {corr:.5f}")
+        self.status_message.emit(f"Etap {self.stage_num} · Scramble wykonany  (klucz = {key})")
         self._refresh_metrics()
 
     def do_unscramble(self):
         if self.scrambled_arr is None:
             self.status_message.emit("⚠  Najpierw wykonaj Scramble!")
             return
-
         key = self.key_input.value()
         self.unscrambled_arr = self._un(self.scrambled_arr, key)
-
         mad = metrics.mean_absolute_diff(self.original_arr, self.unscrambled_arr)
-        ok = mad == 0.0
-
+        ok  = mad == 0.0
         info = "✅  IDENTYCZNY Z ORYGINAŁEM" if ok else f"⚠  Różnica MAD = {mad:.3f}"
-
         self.panel_restored.set_image(self.unscrambled_arr, info)
-
         self.status_message.emit(
             f"Unscramble (poprawny klucz): {'IDENTYCZNY' if ok else f'MAD={mad:.3f}'}"
         )
-
         self._refresh_metrics()
 
     def do_wrong_unscramble(self):
         if self.scrambled_arr is None:
             self.status_message.emit("⚠  Najpierw wykonaj Scramble!")
             return
+        wk    = self.wrong_key.value()
+        wrong = self._un(self.scrambled_arr, wk)
+        mad   = metrics.mean_absolute_diff(self.original_arr, wrong)
+        self.panel_wrong_img.set_image(wrong, f"❌  MAD = {mad:.1f}  (klucz = {wk})")
+        self.status_message.emit(f"Unscramble (błędny klucz = {wk}): MAD = {mad:.1f}")
+        self._refresh_metrics(wrong_arr=wrong)
 
-        wk = self.wrong_key.value()
-        self.wrong_arr = self._un(self.scrambled_arr, wk)
-
-        mad = metrics.mean_absolute_diff(self.original_arr, self.wrong_arr)
-
-        self.panel_wrong_img.set_image(
-            self.wrong_arr,
-            f"❌  MAD = {mad:.1f}  (klucz = {wk})"
-        )
-
-        self.status_message.emit(
-            f"Unscramble (błędny klucz = {wk}): MAD = {mad:.1f}"
-        )
-
-        self._refresh_metrics(wrong_arr=self.wrong_arr)
+    def save_results(self):
+        if self.scrambled_arr is None:
+            self.status_message.emit("⚠  Brak wyników do zapisania.")
+            return
+        folder = QFileDialog.getExistingDirectory(self, "Wybierz folder zapisu")
+        if not folder:
+            return
+        save_image(self.original_arr,  f"{folder}/etap{self.stage_num}_oryginal.png")
+        save_image(self.scrambled_arr, f"{folder}/etap{self.stage_num}_scrambled.png")
+        if self.unscrambled_arr is not None:
+            save_image(self.unscrambled_arr, f"{folder}/etap{self.stage_num}_unscrambled.png")
+        self.status_message.emit(f"✅  Zapisano wyniki → {folder}")
 
     def _refresh_metrics(self, wrong_arr=None):
         if self.original_arr is None or self.scrambled_arr is None:
             return
-
         orig = self.original_arr
-        scr = self.scrambled_arr
-        uns = self.unscrambled_arr
-
+        scr  = self.scrambled_arr
+        uns  = self.unscrambled_arr
         lines = [
             f"═══  ETAP {self.stage_num} — METRYKI  ═══",
             "",
             "  KORELACJA SĄSIEDNICH PIKSELI (kanał R):",
-            f"    Oryginał   [poziomo] :  {metrics.pixel_correlation(orig, 'horizontal'):>9.5f}",
-            f"    Scrambled  [poziomo] :  {metrics.pixel_correlation(scr,  'horizontal'):>9.5f}",
-            f"    Oryginał   [pionowo] :  {metrics.pixel_correlation(orig, 'vertical'):>9.5f}",
-            f"    Scrambled  [pionowo] :  {metrics.pixel_correlation(scr,  'vertical'):>9.5f}",
+            f"    Oryginał   [poziomo] :  {metrics.pixel_correlation(orig,'horizontal'):>9.5f}",
+            f"    Scrambled  [poziomo] :  {metrics.pixel_correlation(scr, 'horizontal'):>9.5f}",
+            f"    Oryginał   [pionowo] :  {metrics.pixel_correlation(orig,'vertical'):>9.5f}",
+            f"    Scrambled  [pionowo] :  {metrics.pixel_correlation(scr, 'vertical'):>9.5f}",
             "",
             "  ENTROPIA SHANNONA (bity/piksel):",
             f"    Oryginał  :  {metrics.entropy(orig):>7.4f}",
             f"    Scrambled :  {metrics.entropy(scr):>7.4f}",
         ]
-
         if uns is not None:
             mad = metrics.mean_absolute_diff(orig, uns)
-
             lines += [
                 "",
                 "  ODWRACALNOŚĆ:",
                 f"    MAD (poprawny klucz) :  {mad:.6f}"
                 + ("  ←  idealne odtworzenie ✓" if mad == 0 else "  ←  BŁĄD ✗"),
             ]
-
         if wrong_arr is not None:
             mad_w = metrics.mean_absolute_diff(orig, wrong_arr)
-
             lines.append(
                 f"    MAD (błędny klucz)   :  {mad_w:.4f}"
                 + ("  ←  wysoka wrażliwość ✓" if mad_w > 50 else "  ←  niska wrażliwość !")
             )
-
         self.metrics_box.setText("\n".join(lines))
 
-    def save_results(self):
-        if self.scrambled_arr is None:
-            self.status_message.emit("⚠  Brak wyników do zapisania.")
-            return
 
-        folder = QFileDialog.getExistingDirectory(self, "Wybierz folder zapisu")
+# ─────────────────────────────────────────
+#  Zakładka porównania
+# ─────────────────────────────────────────
 
-        if not folder:
-            return
+COMPARE_TEXT = """\
+═══════════════════════════════════════════════════════════════
+  PROJEKT M-II — PORÓWNANIE ETAPÓW
+═══════════════════════════════════════════════════════════════
 
-        save_image(
-            self.original_arr,
-            os.path.join(folder, f"etap{self.stage_num}_oryginal.png")
+  ETAP 1 — Naiwny scrambling
+  ───────────────────────────
+  Algorytm : Permutacja wierszy, potem kolumn
+  Odwrotny : Inwersja tablicy  inv[perm[i]] = i
+  Słabość  : Piksele wewnątrz wiersza są nadal sąsiadami
+             → gradient, tekst, szachownica nadal widoczne
+
+  ETAP 2 — Czysta permutacja Fisher-Yates
+  ─────────────────────────────────────────
+  Algorytm : P: {0..N-1} → {0..N-1},  N = H×W
+  Odwrotny : P⁻¹: inv[perm[i]] = i  dla każdego i
+  Słabość  : Histogram niezmieniony → znana dystrybucja
+             Brak efektu lawinowego przy 1-bitowej zmianie klucza
+
+  ETAP 3 — Permutacja + Substytucja addytywna (klasa A)
+  ───────────────────────────────────────────────────────
+  Scramble :  1. Permutacja pikseli (jak Etap 2)
+              2. f(p,k) = (p + S[i]) mod 256
+  Odwrotny :  1. f⁻¹(p,k) = (p − S[i]) mod 256
+              2. Odwrotna permutacja
+  Zaleta   :  Histogram się zmienia
+  Słabość  :  Wciąż NIE jest to bezpieczny szyfr!
+
+═══════════════════════════════════════════════════════════════
+  DLACZEGO TO NIE JEST BEZPIECZNY SZYFR?
+═══════════════════════════════════════════════════════════════
+
+  1. Known-plaintext  →  znając oryginał i scrambled odtworzymy S i P
+  2. Przestrzeń kluczy ~2³²  →  podatny na brute-force
+  3. Brak uwierzytelniania  →  modyfikacja scrambled daje "sensowny" wynik
+  4. Więcej chaosu ≠ bezpieczeństwo  →  tylko trudniejsza analiza wizualna
+"""
+
+
+# ─────────────────────────────────────────
+#  Główne okno
+# ─────────────────────────────────────────
+
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Projekt M-II — Chaotyczne przekształcanie obrazu cyfrowego")
+        self.setMinimumSize(1100, 820)
+        self.setStyleSheet(STYLESHEET)
+        self._build_ui()
+
+    def _build_ui(self):
+        central = QWidget()
+        self.setCentralWidget(central)
+        root = QVBoxLayout(central)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+
+        # Nagłówek
+        header = QFrame()
+        header.setFixedHeight(100)
+        header.setStyleSheet(
+            f"background: {C['header_bg']}; "
+            f"border-bottom: 1px solid {C['border']};"
         )
+        hl = QHBoxLayout(header)
+        hl.setContentsMargins(24, 0, 24, 0)
+        hl.setSpacing(16)
 
-        save_image(
-            self.scrambled_arr,
-            os.path.join(folder, f"etap{self.stage_num}_scrambled.png")
+        # ── LOGO ──────────────────────────────────────────────────
+        # Wczytuje uwb.png z tego samego folderu co main.py
+        # Jeśli plik nie istnieje, wyświetla placeholder z napisem LOGO
+        logo_pix = QPixmap("uwb.png")
+        logo = QLabel()
+        if not logo_pix.isNull():
+            logo.setPixmap(logo_pix.scaled(
+                144, 144,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation
+            ))
+        else:
+            logo.setText("LOGO")
+            logo.setFixedSize(44, 44)
+            logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            logo.setStyleSheet(
+                f"border: 2px dashed {C['border_hi']}; border-radius: 8px; "
+                f"background: {C['bg_card']}; color: {C['text_dim']}; "
+                f"font-size: 9px; font-weight: bold;"
+            )
+        hl.addWidget(logo)
+        # ──────────────────────────────────────────────────────────
+
+        # Tytuł
+        t_col = QVBoxLayout()
+        t_col.setSpacing(3)
+        t1 = QLabel("PROJEKT M-II")
+        t1.setStyleSheet(
+            f"color: {C['text']}; font-size: 20px; "
+            f"font-weight: bold; letter-spacing: 5px;"
         )
+        t2 = QLabel("Chaotyczne przekształcanie obrazu cyfrowego")
+        t2.setStyleSheet(f"color: {C['text_muted']}; font-size: 15px;")
+        t_col.addWidget(t1)
+        t_col.addWidget(t2)
+        hl.addLayout(t_col)
+        hl.addStretch()
 
-        if self.unscrambled_arr is not None:
-            save_image(
-                self.unscrambled_arr,
-                os.path.join(folder, f"etap{self.stage_num}_unscrambled.png")
-            )
+        # Pill z imieniem
+        pill = QLabel("    Daniel Czerniak\n  Informatyka II rok  ")
+        pill.setStyleSheet(
+            f"color: {C['blue']}; font-size: 10px; font-weight: bold; "
+            f"letter-spacing: 1px; border: 1px solid {C['border_hi']}; "
+            f"border-radius: 10px; padding: 3px 8px; background: {C['bg_card']};"
+        )
+        hl.addWidget(pill)
+        root.addWidget(header)
 
-        if self.wrong_arr is not None:
-            save_image(
-                self.wrong_arr,
-                os.path.join(folder, f"etap{self.stage_num}_wrong_key.png")
-            )
+        # Zakładki
+        tabs = QTabWidget()
+        tabs.setDocumentMode(True)
+        root.addWidget(tabs, stretch=1)
 
-        self.status_message.emit(f"✅  Zapisano wyniki → {folder}")
+        for i, name in enumerate([
+            "  Etap 1 — Naiwny scrambling  ",
+            "  Etap 2 — Permutacja  ",
+            "  Etap 3 — Substytucja  ",
+        ], start=1):
+            t = StageTab(stage_num=i)
+            t.status_message.connect(self._status)
+            tabs.addTab(t, name)
+
+        cmp = QWidget()
+        cl  = QVBoxLayout(cmp)
+        cl.setContentsMargins(20, 20, 20, 20)
+        txt = QTextEdit()
+        txt.setReadOnly(True)
+        txt.setText(COMPARE_TEXT)
+        cl.addWidget(txt)
+        tabs.addTab(cmp, "  📊 Porównanie etapów  ")
+
+        sb = QStatusBar()
+        sb.showMessage(
+            "Gotowy.  Wczytaj obraz przeciągając go lub klikając strefę wczytywania."
+        )
+        self.setStatusBar(sb)
+        self._sb = sb
+
+    def _status(self, msg: str):
+        self._sb.showMessage(msg)
 
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
-
     w = MainWindow()
     w.show()
-
     sys.exit(app.exec())
